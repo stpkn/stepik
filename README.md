@@ -1,10 +1,58 @@
 # Programming Course Platform (MVP)
 
-This is a minimal, beginner-friendly MVP of a programming course platform (similar to Stepik).
+Учебный MVP платформы курсов (в духе Stepik).
 
-## Structure
+## Структура
 
-- `frontend/` – React app with a single `Login` page and root `App` component.
-- `backend/` – FastAPI app with a simple login endpoint.
+- **frontend** — React: вход `/login`, после входа разделы «Главная», «Моё обучение», «Статистика», «Активность» (мок-данные).
+- **backend** — FastAPI: `POST /login` (проверка логина/пароля).
 
-Both parts are intentionally kept as small and simple as possible for learning purposes.
+## Запуск
+
+Сначала поднимите API, затем фронтенд (данные студента и преподавателя приходят с сервера).
+
+**Бэкенд** (из папки `backend`):
+
+```bash
+pip install -r requirements.txt
+python main.py
+```
+
+**Фронтенд** (из папки `frontend`):
+
+```bash
+npm install
+npm start
+```
+
+Откройте `http://localhost:3000/login`.
+
+| Логин    | Пароль       | Роль        | После входа   |
+|----------|--------------|-------------|---------------|
+| `student` | `password123` | студент     | `/dashboard`  |
+| `teacher` | `teacher123`  | преподаватель | `/teacher`    |
+
+Данные пользователя сохраняются в `localStorage` (`currentUser`: `id`, `name`, `role`).
+
+### API (мок-данные)
+
+| Метод | Путь | Описание |
+|--------|------|-----------|
+| `GET` | `/courses` | Список курсов |
+| `GET` | `/student/{id}` | Студент, курсы, прогресс, статистика, активность |
+| `GET` | `/teacher/{id}` | Преподаватель, прогресс студентов, курсы, статистика |
+| `POST` | `/login` | Вход; тело: `{"login","password"}`; успех: `{"id","name","role"}`; ошибка: `401` |
+
+После входа фронт запрашивает `GET /student/{id}` или `GET /teacher/{id}` с `id` из ответа логина.
+
+## Маршруты фронтенда
+
+| Путь | Описание |
+|------|----------|
+| `/login` | Страница входа |
+| `/` | Редирект: студент → `/dashboard`, преподаватель → `/teacher`, иначе `/login` |
+| `/dashboard` | Главная студента (нужен вход как студент) |
+| `/dashboard/learning` | Моё обучение |
+| `/dashboard/statistics` | Статистика |
+| `/dashboard/activity` | Активность |
+| `/teacher` | Панель преподавателя (нужен вход как `teacher`) |
