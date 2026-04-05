@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { API_BASE } from "../api/config";
 import { getStoredUser, setStoredUser } from "../auth/storage";
+import ThemeToggle from "../components/ThemeToggle";
 
 function Login() {
   const [login, setLogin] = useState("");
@@ -68,20 +69,24 @@ function Login() {
 
   return (
     <div className="login-layout">
-      <div className="card">
-        <div className="card-header">
-          <h1 className="card-title">Вход</h1>
-          <p className="card-subtitle">Получите доступ к вашим курсам</p>
+      <div className="card auth-card">
+        <div className="card-header card-header--with-toggle auth-card__header">
+          <div>
+            <p className="auth-brand">StepikIn</p>
+            <h1 className="card-title">С&nbsp;возвращением</h1>
+            <p className="card-subtitle">Введите данные для входа в систему</p>
+          </div>
+          <ThemeToggle />
         </div>
         {error ? (
           <p className="login-error" role="alert">
             {error}
           </p>
         ) : null}
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
             <label className="form-label" htmlFor="login">
-              Логин
+              Логин или почта
             </label>
             <input
               id="login"
@@ -105,7 +110,7 @@ function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              placeholder="пароль"
+              placeholder="Введите пароль"
               autoComplete="current-password"
             />
           </div>
@@ -113,6 +118,15 @@ function Login() {
             Войти
           </button>
         </form>
+
+        <div className="login-hint-box auth-hint-box">
+          <p className="priority-pill priority-pill--p1">P1</p>
+          <p className="login-hint-text">Тестовые учетные записи:</p>
+          <ul className="login-hint-list">
+            <li>student / password123</li>
+            <li>teacher / teacher123</li>
+          </ul>
+        </div>
       </div>
     </div>
   );
