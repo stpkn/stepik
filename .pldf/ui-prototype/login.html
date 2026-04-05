@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login - Programming Course Platform</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="title-row">
+        <h1>Login</h1>
+        <span class="badge p1">P1</span>
+      </div>
+      <div class="subtitle">Authenticate student or teacher</div>
+    </header>
+
+    <nav>
+      <a href="index.html">Back to map</a>
+      <a href="dashboard-home.html">Student Home</a>
+      <a href="teacher-dashboard.html">Teacher Dashboard</a>
+    </nav>
+
+    <main>
+      <section class="card" style="max-width: 520px; margin: 0 auto;">
+        <h2>Credentials</h2>
+        <p class="subtitle">Mock users: student/password123, teacher/teacher123</p>
+        <div class="list" style="padding-left:0; list-style:none; margin-top:14px;">
+          <p><strong>Login</strong></p>
+          <div class="card" style="padding:10px;">student</div>
+          <p><strong>Password</strong></p>
+          <div class="card" style="padding:10px;">password123</div>
+        </div>
+        <p style="margin-top:12px;">
+          <a class="button" href="dashboard-home.html">Sign in as Student</a>
+          <a class="button" href="teacher-dashboard.html" style="margin-left:8px; background:#3f4d5a; border-color:#2f3c48;">Sign in as Teacher</a>
+        </p>
+      </section>
+
+      <section class="card warn">
+        <h3>Invalid credentials state</h3>
+        <p>Inline message: "Wrong login or password". Keep login field value and focus password input.</p>
+      </section>
+    </main>
+
+    <footer>Prototype login includes normal and error states.</footer>
+  </div>
+</body>
+</html>
