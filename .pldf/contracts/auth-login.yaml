@@ -1,0 +1,52 @@
+openapi: 3.0.3
+info:
+  title: Auth Login Contract
+  version: 1.0.0
+paths:
+  /login:
+    post:
+      tags:
+        - auth
+      summary: User login from login screen
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [login, password]
+              properties:
+                login:
+                  type: string
+                  minLength: 1
+                  example: student
+                password:
+                  type: string
+                  minLength: 1
+                  example: password123
+      responses:
+        '200':
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message:
+                    type: string
+                    example: Successfully logged in as student
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [detail]
+                properties:
+                  detail:
+                    type: string
+                    example: Invalid login or password
+        '422':
+          description: Validation error
