@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { API_BASE } from "../api/config";
 import { getStoredUser, clearStoredUser } from "../auth/storage";
+import ThemeToggle from "../components/ThemeToggle";
 
 async function fetchTeacher(id) {
   const res = await fetch(`${API_BASE}/teacher/${id}`);
@@ -51,7 +52,10 @@ function TeacherDashboardView({ teacherId }) {
     return (
       <div className="dashboard-page">
         <aside className="dashboard-sidebar" aria-label="Навигация преподавателя">
-          <div className="sidebar-brand">Кабинет преподавателя</div>
+          <div className="sidebar-brand-row">
+            <div className="sidebar-brand">StepikIn Преподаватель</div>
+            <ThemeToggle />
+          </div>
           {footer}
         </aside>
         <main className="dashboard-main dashboard-main--wide">
@@ -67,7 +71,10 @@ function TeacherDashboardView({ teacherId }) {
     return (
       <div className="dashboard-page">
         <aside className="dashboard-sidebar" aria-label="Навигация преподавателя">
-          <div className="sidebar-brand">Кабинет преподавателя</div>
+          <div className="sidebar-brand-row">
+            <div className="sidebar-brand">StepikIn Преподаватель</div>
+            <ThemeToggle />
+          </div>
           {footer}
         </aside>
         <main className="dashboard-main dashboard-main--wide">
@@ -90,7 +97,10 @@ function TeacherDashboardView({ teacherId }) {
   return (
     <div className="dashboard-page">
       <aside className="dashboard-sidebar" aria-label="Навигация преподавателя">
-        <div className="sidebar-brand">Кабинет преподавателя</div>
+        <div className="sidebar-brand-row">
+          <div className="sidebar-brand">StepikIn Преподаватель</div>
+          <ThemeToggle />
+        </div>
         <nav className="sidebar-nav">
           <a href="#teacher-students" className="sidebar-link">
             Прогресс студентов
@@ -117,9 +127,21 @@ function TeacherDashboardView({ teacherId }) {
             Добро пожаловать, {data.display_name}
           </h1>
           <p className="dashboard-subtitle">
-            Управление курсами и отслеживание успеваемости.
+            Риск-ориентированный обзор по студентам и курсам.
           </p>
         </header>
+
+        <section
+          className="dashboard-section"
+          aria-labelledby="teacher-priority-title"
+        >
+          <h2 id="teacher-priority-title" className="dashboard-section-title">
+            Приоритетные студенты
+          </h2>
+          <div className="notice-banner notice-banner--warn">
+            Сфокусируйтесь на студентах с прогрессом ниже 50%: это повысит общий темп группы.
+          </div>
+        </section>
 
         <section
           id="teacher-students"
@@ -264,6 +286,24 @@ function TeacherDashboardView({ teacherId }) {
                 Удалить
               </button>
             </div>
+          </div>
+
+          <div className="insight-grid" style={{ marginTop: "14px" }}>
+            <article className="insight-card">
+              <p className="priority-pill priority-pill--p2">P2</p>
+              <h3 className="insight-card__title">Очередь проверок</h3>
+              <ul className="insight-list">
+                <li>4 задания ожидают обратной связи</li>
+                <li>2 запроса на разбор ошибки в коде</li>
+              </ul>
+            </article>
+            <article className="insight-card">
+              <p className="priority-pill priority-pill--p3">P3</p>
+              <h3 className="insight-card__title">Превью тепловой карты группы</h3>
+              <p className="insight-text">
+                Дополнительный вид для анализа активности по темам и неделям.
+              </p>
+            </article>
           </div>
         </section>
       </main>

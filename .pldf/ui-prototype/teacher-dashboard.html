@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Teacher Dashboard - Programming Course Platform</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="title-row">
+        <h1>Teacher Dashboard</h1>
+        <span class="badge p1">P1</span>
+      </div>
+      <div class="subtitle">Cohort progress control and intervention signals</div>
+    </header>
+
+    <nav>
+      <a href="index.html">Back to map</a>
+      <a href="login.html">Login</a>
+      <a href="dashboard-home.html">Student Home</a>
+    </nav>
+
+    <main>
+      <section class="grid-3">
+        <div class="card"><div class="kpi">47</div><div class="kpi-label">Total students</div></div>
+        <div class="card"><div class="kpi">4</div><div class="kpi-label">Active courses</div></div>
+        <div class="card"><div class="kpi">68%</div><div class="kpi-label">Average progress</div></div>
+      </section>
+
+      <section class="card">
+        <h2>Students requiring attention</h2>
+        <table class="table">
+          <thead><tr><th>Student</th><th>Course</th><th>Progress</th><th>Risk</th></tr></thead>
+          <tbody>
+            <tr><td>Maria Sokolova</td><td>React Fundamentals</td><td>18%</td><td>High</td></tr>
+            <tr><td>Elena Volkova</td><td>Data Structures</td><td>45%</td><td>Medium</td></tr>
+            <tr><td>Dmitry Orlov</td><td>Python Basics</td><td>55%</td><td>Medium</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="grid-2">
+        <div class="card">
+          <h3>Review queue <span class="badge p2">P2</span></h3>
+          <ul class="list">
+            <li>4 assignments waiting for feedback</li>
+            <li>2 students requested clarification</li>
+            <li>1 quiz anomaly to inspect</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Cohort heatmap preview <span class="badge p3">P3</span></h3>
+          <p>Optional matrix preview by week and topic for trend spotting.</p>
+        </div>
+      </section>
+
+      <section class="notice warn">
+        Empty-state rule: if no active courses, show quick action to create the first course and invite students.
+      </section>
+    </main>
+
+    <footer>Teacher dashboard prioritizes low-progress learners first.</footer>
+  </div>
+</body>
+</html>
