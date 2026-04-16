@@ -56,4 +56,3 @@ npm start
 | `/dashboard/statistics` | Статистика |
 | `/dashboard/activity` | Активность |
 | `/teacher` | Панель преподавателя (нужен вход как `teacher`) |
-######
