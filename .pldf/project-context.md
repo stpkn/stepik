@@ -4,11 +4,13 @@ Project: Programming Course Platform (MVP)
 Repository: OS_project
 
 ## Stage Status
-- Current stage: architecture
+- Current stage: plan
 - Design status: Completed
 - Tech stack status: Completed
 - Tech stack approval: Confirmed by student (2026-04-16)
 - Architecture status: Completed
+- Planning status: In progress (step 01 created)
+- Deployment scope: Excluded by decision
 - Last update: 2026-04-16
 
 ## Product Summary
@@ -28,21 +30,18 @@ Teacher side includes progress overview and course-level control.
 - data model: .pldf/data-model.md
 - contracts: .pldf/contracts/openapi.yaml
 - architecture key decisions: .pldf/architecture.md#ключевые-решения-этапа
-# Project Context
+- implementation plan: .pldf/implementation-plan.md
+- planning context cache: .pldf/planning-context-cache.md
+- planning progress: .pldf/memory/progress.json
 
-Project: Programming Course Platform (MVP)
-Repository: OS_project
+## Implementation Steps
+- step-01-auth-persistence-foundation: Planned
+	- context: .pldf/steps/step-01-auth-persistence-foundation/planning-context.md
+	- details: .pldf/steps/step-01-auth-persistence-foundation/description.md
 
-## Stage Status
-- Current stage: design
-- Design status: Completed
-- Last update: 2026-04-05
-
-## Product Summary
-Web platform for students and teachers in programming courses.
-Student side includes login, dashboard, learning, statistics, and activity.
-Teacher side includes progress overview and course-level control.
-
-## Source References
-- frontend routes: frontend/src/App.jsx
-- backend API: backend/main.py
+## Planning Metrics
+- Planned steps count: 1
+- P1 coverage: 1/6 (17%)
+- P2 coverage: 0/3 (0%)
+- P3 coverage: 0/4 (0%)
+- Overall planning progress: 9%

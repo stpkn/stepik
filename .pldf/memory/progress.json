@@ -1,0 +1,56 @@
+{
+  "plannedSteps": [
+    {
+      "id": "step-01-auth-persistence-foundation",
+      "title": "Основа авторизации и SQLite persistence",
+      "status": "planned",
+      "priority": "P1",
+      "dependsOn": [],
+      "coversFunctions": [
+        "P1: Authentication"
+      ],
+      "artifacts": {
+        "ui": [
+          ".pldf/ui-design.md",
+          ".pldf/ui-prototype/login.html"
+        ],
+        "api": [
+          ".pldf/contracts/openapi.yaml",
+          ".pldf/contracts/auth-login.yaml"
+        ],
+        "data": [
+          ".pldf/data-model.md"
+        ]
+      }
+    }
+  ],
+  "stepStatus": {
+    "step-01-auth-persistence-foundation": "planned"
+  },
+  "planningMetadata": {
+    "lastPlannedStep": "step-01-auth-persistence-foundation",
+    "planningPhase": "initial",
+    "totalStepsEstimated": 13,
+    "stepDependencies": {
+      "step-01-auth-persistence-foundation": []
+    },
+    "progressMetrics": {
+      "p1Coverage": {
+        "covered": 1,
+        "total": 6,
+        "percentage": 17
+      },
+      "p2Coverage": {
+        "covered": 0,
+        "total": 3,
+        "percentage": 0
+      },
+      "p3Coverage": {
+        "covered": 0,
+        "total": 4,
+        "percentage": 0
+      },
+      "overallProgress": 9
+    }
+  }
+}

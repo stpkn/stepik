@@ -25,7 +25,18 @@ OS_project/
 │   ├── src/
 │   │   ├── pages/
 │   │   │   ├── Login.jsx
-│   │   │   └── Dashboard.jsx
+│   │   │   ├── Home.jsx
+│   │   │   ├── Learning.jsx
+│   │   │   ├── Statistics.jsx
+│   │   │   ├── ActivityPage.jsx
+│   │   │   └── TeacherDashboard.jsx
+│   │   ├── components/
+│   │   │   ├── StudentLayout.jsx
+│   │   │   ├── HomeRedirect.jsx
+│   │   │   └── ThemeToggle.jsx
+│   │   ├── context/
+│   │   │   ├── ThemeContext.jsx
+│   │   │   └── StudentDataContext.jsx
 │   │   ├── App.jsx
 │   │   ├── index.jsx
 │   │   └── styles.css
@@ -71,7 +82,7 @@ OS_project/
 - Количество endpoint: 1
 - Группа endpoint: auth
 - Реализованный endpoint: POST /login
-- Экран Dashboard не имеет backend endpoint в текущем MVP (подтверждено контрактом dashboard-screen.md)
+- Остальные P1-экраны в текущем MVP используют frontend/mock слой и не требуют обязательного backend endpoint (см. `.pldf/contracts/dashboard-screen.md`)
 
 ## Внешние зависимости
 
@@ -133,7 +144,7 @@ OS_project/
 ## Ключевые решения этапа
 
 ### 1. Lightweight Layered Architecture вместо сложной Clean Architecture
-- Причина: Текущий MVP содержит 2 экрана и 1 endpoint; сложная многослойная схема была бы преждевременной оптимизацией.
+- Причина: Текущий MVP содержит несколько экранов и минимальный backend-контур (1 endpoint), поэтому сложная многослойная схема была бы преждевременной оптимизацией.
 - Влияние: На этапе `/pldf.plan` шаги будут короткими и прямыми, без избыточной инфраструктуры.
 
 ### 2. Contract-first API через единый openapi.yaml
