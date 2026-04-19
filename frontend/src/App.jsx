@@ -8,25 +8,28 @@ import Statistics from "./pages/Statistics";
 import ActivityPage from "./pages/ActivityPage";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import HomeRedirect from "./components/HomeRedirect";
+import { ThemeProvider } from "./context/ThemeContext";
 
 function App() {
   return (
-    <div className="app-shell">
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/teacher" element={<TeacherDashboard />} />
-          <Route path="/dashboard" element={<StudentLayout />}>
-            <Route index element={<Home />} />
-            <Route path="learning" element={<Learning />} />
-            <Route path="statistics" element={<Statistics />} />
-            <Route path="activity" element={<ActivityPage />} />
-          </Route>
-          <Route path="/" element={<HomeRedirect />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </div>
+    <ThemeProvider>
+      <div className="app-shell">
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/teacher" element={<TeacherDashboard />} />
+            <Route path="/dashboard" element={<StudentLayout />}>
+              <Route index element={<Home />} />
+              <Route path="learning" element={<Learning />} />
+              <Route path="statistics" element={<Statistics />} />
+              <Route path="activity" element={<ActivityPage />} />
+            </Route>
+            <Route path="/" element={<HomeRedirect />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </div>
+    </ThemeProvider>
   );
 }
 

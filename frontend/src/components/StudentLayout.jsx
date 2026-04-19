@@ -2,6 +2,7 @@ import React from "react";
 import { Navigate, NavLink, Link } from "react-router-dom";
 import { StudentDataProvider } from "../context/StudentDataContext";
 import { getStoredUser, clearStoredUser } from "../auth/storage";
+import ThemeToggle from "./ThemeToggle";
 
 function StudentLayout() {
   const user = getStoredUser();
@@ -19,7 +20,10 @@ function StudentLayout() {
   return (
     <div className="dashboard-page">
       <aside className="dashboard-sidebar" aria-label="Главная навигация">
-        <div className="sidebar-brand">Обучение</div>
+        <div className="sidebar-brand-row">
+          <div className="sidebar-brand">StepikIn Студент</div>
+          <ThemeToggle />
+        </div>
         <nav className="sidebar-nav">
           <NavLink to="/dashboard" className="sidebar-link" end>
             Главная

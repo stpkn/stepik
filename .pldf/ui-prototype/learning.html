@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Learning - Programming Course Platform</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="title-row">
+        <h1>Learning</h1>
+        <span class="badge p1">P1</span>
+      </div>
+      <div class="subtitle">Course and module level progress management</div>
+    </header>
+
+    <nav>
+      <a href="index.html">Back to map</a>
+      <a href="dashboard-home.html">Dashboard Home</a>
+      <a href="statistics.html">Statistics</a>
+      <a href="activity.html">Activity</a>
+    </nav>
+
+    <main>
+      <section class="card">
+        <h2>Course filters <span class="badge p2">P2</span></h2>
+        <p>Filter by: In progress | Completed | High priority topic</p>
+      </section>
+
+      <section class="card">
+        <h2>My Courses</h2>
+        <table class="table">
+          <thead><tr><th>Course</th><th>Modules completed</th><th>Progress</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td>Python Basics</td><td>9 / 12</td><td><div class="meter"><span style="width:72%"></span></div></td><td><a href="#">Open module</a></td></tr>
+            <tr><td>Data Structures</td><td>5 / 11</td><td><div class="meter"><span style="width:45%"></span></div></td><td><a href="#">Open module</a></td></tr>
+            <tr><td>React Fundamentals</td><td>2 / 10</td><td><div class="meter"><span style="width:18%"></span></div></td><td><a href="#">Open module</a></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="notice">
+        Suggested next step: complete the "Hooks" lesson to maintain current pace.
+      </section>
+    </main>
+
+    <footer>Learning screen reflects progress data and action-oriented navigation.</footer>
+  </div>
+</body>
+</html>

@@ -10,9 +10,23 @@ function Learning() {
       <header className="dashboard-main-header">
         <h1 className="dashboard-welcome">Моё обучение</h1>
         <p className="dashboard-subtitle">
-          Все ваши курсы в одном месте — откройте карточку и продолжайте с того места, где остановились.
+          Все курсы в одном месте: фильтруйте список и продолжайте с последнего шага.
         </p>
       </header>
+
+      <section className="dashboard-section" aria-labelledby="learning-filters-title">
+        <h2 id="learning-filters-title" className="dashboard-section-title">
+          Фильтры и фокус
+        </h2>
+        <div className="filter-card">
+          <p className="priority-pill priority-pill--p2">P2</p>
+          <div className="chip-row">
+            <span className="chip">В процессе</span>
+            <span className="chip">Завершенные</span>
+            <span className="chip">Требуют внимания</span>
+          </div>
+        </div>
+      </section>
 
       <section className="dashboard-section" aria-labelledby="learning-grid-title">
         <h2 id="learning-grid-title" className="dashboard-section-title">
@@ -38,6 +52,15 @@ function Learning() {
               </div>
             </article>
           ))}
+        </div>
+      </section>
+
+      <section className="dashboard-section" aria-labelledby="learning-next-step">
+        <h2 id="learning-next-step" className="dashboard-section-title">
+          Следующий шаг
+        </h2>
+        <div className="notice-banner">
+          Продолжайте модуль "Hooks" в курсе React: это даст лучший темп на этой неделе.
         </div>
       </section>
     </>

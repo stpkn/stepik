@@ -89,6 +89,31 @@ function Statistics() {
           </div>
         </div>
       </section>
+
+      <section className="dashboard-section" aria-labelledby="stats-extra-title">
+        <h2 id="stats-extra-title" className="dashboard-section-title">
+          Дополнительные аналитические блоки
+        </h2>
+        <div className="insight-grid">
+          <article className="insight-card">
+            <p className="priority-pill priority-pill--p2">P2</p>
+            <h3 className="insight-card__title">Сравнение неделя к неделе</h3>
+            <p className="insight-text">
+              Текущая неделя: +11% активности относительно предыдущей.
+            </p>
+          </article>
+          <article className="insight-card">
+            <p className="priority-pill priority-pill--p3">P3</p>
+            <h3 className="insight-card__title">Экспорт отчета</h3>
+            <p className="insight-text">
+              Предпросмотр выгрузки CSV для прогресса и недельной активности.
+            </p>
+          </article>
+        </div>
+        <div className="notice-banner notice-banner--warn">
+          Если API временно недоступен, показывается последний успешный снимок и кнопка повторной загрузки.
+        </div>
+      </section>
     </>
   );
 }

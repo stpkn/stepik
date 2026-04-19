@@ -96,7 +96,7 @@ COURSES = [
     },
 ]
 
-# --- Записи на курс: student_id, course_id ---
+# --- Записи на курс: student_id, course_id
 ENROLLMENTS = [
     {"student_id": 1, "course_id": 1},
     {"student_id": 1, "course_id": 2},
