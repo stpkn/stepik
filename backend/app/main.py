@@ -119,7 +119,7 @@ def _migrate_schema():
     if "sqlite" not in DATABASE_URL:
         return
     insp = inspect(engine)
-    if "courses" not insp.get_table_names():
+    if "courses" not in insp.get_table_names():
         return
     cols = {c["name"] for c in insp.get_columns("courses")}
     stmts = []
@@ -362,4 +362,4 @@ def create_student(teacher_id: int, req: StudentCreate, db: Session = Depends(ge
     return {"id":student.id,"login":student.login,"password":password,"role":"student"}
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="127.0.0.1", port=8001, reload=True)
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

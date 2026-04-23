@@ -8,6 +8,8 @@ export default function CoursePage() {
   const { id } = useParams();
   const courseId = Number(id);
   const user = getStoredUser();
+
+  console.log("USER:", user);
   const idValid = Number.isFinite(courseId) && courseId > 0;
 
   const [data, setData] = useState(null);
@@ -47,9 +49,25 @@ export default function CoursePage() {
       .finally(() => setLoading(false));
   }, [user, courseId, idValid]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+ useEffect(() => {
+  if (!user?.id || !courseId) return;
+
+  const load = async () => {
+    try {
+      const res = await fetch(
+        `${API_BASE}/student/${user.id}/course/${courseId}`
+      );
+      const json = await res.json();
+      setData(json);
+    } catch (e) {
+      setError("Не удалось загрузить курс");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  load();
+}, [user?.id, courseId]);
 
   if (!user) {
     return <Navigate to="/login" replace />;
