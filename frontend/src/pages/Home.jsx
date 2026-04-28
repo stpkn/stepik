@@ -1,5 +1,5 @@
 import React from "react";
-import { useOutletContext } from "react-router-dom";
+import { Link, useOutletContext } from "react-router-dom";
 import { getActiveCourses, getAverageProgress } from "../data/mockStudent";
 
 function Home() {
@@ -9,7 +9,10 @@ function Home() {
   const displayName = data?.display_name ?? "Студент";
   const active = getActiveCourses(courses);
   const avgProgress = getAverageProgress(courses);
-  const featured = courses.filter((c) => c.featured).slice(0, 2);
+  const featured =
+    courses.filter((c) => c.featured).slice(0, 2).length > 0
+      ? courses.filter((c) => c.featured).slice(0, 2)
+      : courses.slice(0, 2);
   const upcoming = (data?.activity ?? []).slice(0, 4);
 
   const perfPoints = [32, 44, 52, 40, 67, 58, 76];
@@ -110,8 +113,12 @@ function Home() {
       <section className="dashboard-section" aria-labelledby="home-learning-feed">
         <h2 id="home-learning-feed" className="dashboard-section-title">Продолжить обучение</h2>
         <div className="featured-grid">
-          {featured.map((course) => (
-            <article key={course.id} className="featured-card">
+          {(courses.length ? courses : featured).slice(0, 3).map((course) => (
+            <Link
+              key={course.id}
+              to={`/course/${course.id}`}
+              className="featured-card featured-card--link"
+            >
               <h3 className="featured-card__title">{course.title}</h3>
               <p className="featured-card__desc">{course.description}</p>
               <div className="progress-row">
@@ -127,7 +134,7 @@ function Home() {
               >
                 <div className="progress-fill" style={{ width: `${course.progress}%` }} />
               </div>
-            </article>
+            </Link>
           ))}
         </div>
       </section>

@@ -15,7 +15,7 @@
 
 ```bash
 pip install -r requirements.txt
-python main.py
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 **Фронтенд** (из папки `frontend`):

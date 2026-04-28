@@ -3,6 +3,8 @@ import { Link, Navigate } from "react-router-dom";
 import { API_BASE } from "../api/config";
 import { getStoredUser, clearStoredUser } from "../auth/storage";
 import ThemeToggle from "../components/ThemeToggle";
+import AddStudentModal from "../components/AddStudentModal";
+import CreateCourseModal from "../components/CreateCourseModal";
 
 async function fetchTeacher(id) {
   const res = await fetch(`${API_BASE}/teacher/${id}`);
@@ -16,6 +18,26 @@ function TeacherDashboardView({ teacherId }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
+  const [studentsList, setStudentsList] = useState([]);
+  const [addStudentOpen, setAddStudentOpen] = useState(false);
+  const [createCourseOpen, setCreateCourseOpen] = useState(false);
+
+  const refreshStudents = useCallback(() => {
+    fetch(`${API_BASE}/teacher/${teacherId}/students`)
+      .then(async (res) => {
+        if (!res.ok) {
+          const t = await res.text();
+          throw new Error(t || res.statusText);
+        }
+        return res.json();
+      })
+      .then(setStudentsList)
+      .catch(() => setStudentsList([]));
+  }, [teacherId]);
+
+  useEffect(() => {
+    refreshStudents();
+  }, [refreshStudents]);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -113,6 +135,9 @@ function TeacherDashboardView({ teacherId }) {
           </a>
           <a href="#teacher-activity" className="sidebar-link">
             Активность
+          </a>
+          <a href="#teacher-class-list" className="sidebar-link">
+            Ученики
           </a>
           <a href="#teacher-manage" className="sidebar-link">
             Управление
@@ -264,6 +289,39 @@ function TeacherDashboardView({ teacherId }) {
         </section>
 
         <section
+          id="teacher-class-list"
+          className="dashboard-section"
+          aria-labelledby="teacher-class-list-title"
+        >
+          <div className="teacher-class-list-head">
+            <h2 id="teacher-class-list-title" className="dashboard-section-title">
+              Ученики
+            </h2>
+            <button
+              type="button"
+              className="teacher-btn teacher-btn--primary"
+              onClick={() => setAddStudentOpen(true)}
+            >
+              Добавить ученика
+            </button>
+          </div>
+          {studentsList.length === 0 ? (
+            <p className="teacher-class-list-empty">Пока нет учеников на ваших курсах.</p>
+          ) : (
+            <ul className="teacher-class-list">
+              {studentsList.map((s) => (
+                <li key={s.id} className="teacher-class-list__item">
+                  <span className="teacher-class-list__name">
+                    {s.first_name} {s.last_name}
+                  </span>
+                  <span className="teacher-class-list__login">{s.login}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section
           id="teacher-manage"
           className="dashboard-section"
           aria-labelledby="teacher-manage-title"
@@ -276,7 +334,11 @@ function TeacherDashboardView({ teacherId }) {
               Кнопки только для интерфейса — без сохранения на сервере.
             </p>
             <div className="teacher-manage-actions">
-              <button type="button" className="teacher-btn teacher-btn--primary">
+              <button
+                type="button"
+                className="teacher-btn teacher-btn--primary"
+                onClick={() => setCreateCourseOpen(true)}
+              >
                 Создать курс
               </button>
               <button type="button" className="teacher-btn teacher-btn--secondary">
@@ -306,6 +368,19 @@ function TeacherDashboardView({ teacherId }) {
             </article>
           </div>
         </section>
+
+        <AddStudentModal
+          isOpen={addStudentOpen}
+          onClose={() => setAddStudentOpen(false)}
+          teacherId={teacherId}
+          onStudentCreated={refreshStudents}
+        />
+        <CreateCourseModal
+          isOpen={createCourseOpen}
+          onClose={() => setCreateCourseOpen(false)}
+          teacherId={teacherId}
+          onCourseCreated={load}
+        />
       </main>
     </div>
   );

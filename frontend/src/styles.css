@@ -1644,3 +1644,437 @@ body {
   color: #ced8e3;
 }
 
+/* Модалка: добавление ученика */
+@keyframes add-student-modal-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes add-student-modal-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.add-student-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(4px);
+  animation: add-student-modal-fade 0.22s ease-out;
+}
+
+.add-student-modal__panel {
+  width: 100%;
+  max-width: 420px;
+  max-height: min(90vh, 640px);
+  overflow: auto;
+  border-radius: 16px;
+  padding: 22px 22px 20px;
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  box-shadow: 0 24px 48px rgba(23, 32, 41, 0.18);
+  animation: add-student-modal-pop 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.add-student-modal__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.add-student-modal__title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1.3;
+}
+
+.add-student-modal__close {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.add-student-modal__close:hover {
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--text-main);
+}
+
+.add-student-modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.teacher-class-list-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.teacher-class-list-head .dashboard-section-title {
+  margin-bottom: 0;
+}
+
+.teacher-class-list {
+  list-style: none;
+  border-radius: 14px;
+  border: 1px solid var(--line-soft);
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgba(23, 32, 41, 0.08);
+  overflow: hidden;
+}
+
+.teacher-class-list__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.teacher-class-list__item:last-child {
+  border-bottom: none;
+}
+
+.teacher-class-list__name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.teacher-class-list__login {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.teacher-class-list-empty {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.create-course-modal__panel {
+  max-width: 520px;
+  max-height: min(92vh, 720px);
+}
+
+.create-course-modal__textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+
+.create-course-modal__question {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.create-course-modal__question-label {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.create-course-modal__answers {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.create-course-modal__answers .form-label {
+  margin-bottom: 10px;
+}
+
+.create-course-modal__answer-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.create-course-modal__answer-row input[type="radio"] {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
+.create-course-modal__answer-row .form-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.add-student-modal__courses {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.add-student-modal__courses-hint {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+
+.add-student-modal__course-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  font-size: 0.9375rem;
+  color: var(--text-main);
+}
+
+.add-student-modal__course-row input[type="checkbox"] {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: var(--accent);
+}
+
+.course-card-grid--link,
+.featured-card--link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.course-card-grid--link:hover,
+.featured-card--link:hover {
+  border-color: rgba(96, 165, 250, 0.45);
+  box-shadow: 0 12px 32px rgba(23, 32, 41, 0.12);
+}
+
+.create-course-modal__toolbar {
+  margin-bottom: 8px;
+}
+
+.create-course-modal__question-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.create-course-modal__q-remove {
+  padding: 6px 12px;
+  font-size: 0.8125rem;
+}
+
+.create-course-modal__add-answer {
+  margin-top: 6px;
+  align-self: flex-start;
+}
+
+.create-course-modal__answer-remove {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.create-course-modal__answer-remove:hover {
+  background: rgba(220, 53, 69, 0.12);
+  color: #b83232;
+}
+
+.course-page__breadcrumb {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.course-page__breadcrumb a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.course-page__breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.course-page__lead {
+  max-width: 52rem;
+}
+
+.course-page__progress-meta {
+  margin-top: 12px;
+  max-width: 360px;
+}
+
+.course-page__progress-bar {
+  margin-top: 8px;
+}
+
+.course-page__block {
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  padding: 16px 18px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  font-size: 0.9375rem;
+}
+
+.course-page__block--muted {
+  margin-top: 12px;
+  background: rgba(237, 242, 255, 0.6);
+}
+
+.course-page__subhead {
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.course-page__pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.875rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.course-page__questions {
+  display: grid;
+  gap: 16px;
+}
+
+.course-page__question-card {
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 8px 22px rgba(23, 32, 41, 0.06);
+}
+
+.course-page__question-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 14px;
+  line-height: 1.4;
+  color: var(--text-main);
+}
+
+.course-page__options {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.course-page__option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 0.9375rem;
+  color: var(--text-main);
+}
+
+.course-page__option input {
+  margin-top: 3px;
+  accent-color: var(--accent);
+}
+
+.course-page__check-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.course-page__result {
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.course-page__result--ok {
+  color: #1f6f4a;
+}
+
+.course-page__result--bad {
+  color: #b83232;
+}
+
+[data-theme="dark"] .course-page__block--muted {
+  background: rgba(30, 41, 59, 0.5);
+}
+
+[data-theme="dark"] .course-page__result--ok {
+  color: #86efac;
+}
+
+[data-theme="dark"] .course-page__result--bad {
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .add-student-modal {
+  background: rgba(3, 6, 17, 0.72);
+}
+
+[data-theme="dark"] .add-student-modal__panel {
+  background: rgba(10, 16, 36, 0.94);
+  border-color: rgba(86, 96, 153, 0.45);
+  box-shadow: 0 28px 60px rgba(5, 10, 28, 0.65);
+}
+
+[data-theme="dark"] .add-student-modal__close:hover {
+  background: rgba(95, 86, 185, 0.28);
+  color: #e8edf2;
+}
+
+[data-theme="dark"] .teacher-class-list {
+  background: rgba(10, 16, 36, 0.86);
+  border-color: rgba(86, 96, 153, 0.45);
+}
+

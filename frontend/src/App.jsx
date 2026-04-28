@@ -7,6 +7,7 @@ import Learning from "./pages/Learning";
 import Statistics from "./pages/Statistics";
 import ActivityPage from "./pages/ActivityPage";
 import TeacherDashboard from "./pages/TeacherDashboard";
+import CoursePage from "./pages/CoursePage";
 import HomeRedirect from "./components/HomeRedirect";
 import { ThemeProvider } from "./context/ThemeContext";
 
@@ -18,6 +19,7 @@ function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/teacher" element={<TeacherDashboard />} />
+            <Route path="/course/:id" element={<CoursePage />} />
             <Route path="/dashboard" element={<StudentLayout />}>
               <Route index element={<Home />} />
               <Route path="learning" element={<Learning />} />

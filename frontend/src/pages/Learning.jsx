@@ -1,5 +1,5 @@
 import React from "react";
-import { useOutletContext } from "react-router-dom";
+import { Link, useOutletContext } from "react-router-dom";
 
 function Learning() {
   const data = useOutletContext();
@@ -34,7 +34,11 @@ function Learning() {
         </h2>
         <div className="course-grid">
           {courses.map((course) => (
-            <article key={course.id} className="course-card-grid">
+            <Link
+              key={course.id}
+              to={`/course/${course.id}`}
+              className="course-card-grid course-card-grid--link"
+            >
               <h3 className="course-card-grid__title">{course.title}</h3>
               <p className="course-card-grid__desc">{course.description}</p>
               <div className="progress-row">
@@ -50,7 +54,7 @@ function Learning() {
               >
                 <div className="progress-fill" style={{ width: `${course.progress}%` }} />
               </div>
-            </article>
+            </Link>
           ))}
         </div>
       </section>
