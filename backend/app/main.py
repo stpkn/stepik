@@ -215,6 +215,70 @@ def build_assistant_prompt(mode: str, text: str) -> Optional[str]:
         )
     return None
 
+def normalize_ai_json(text: str) -> str:
+    return text.replace("```json", "").replace("```", "").strip()
+
+def validate_assistant_result(mode: str, text: str) -> Optional[str]:
+    """Return error message if invalid, else None."""
+    try:
+        data = json.loads(text)
+    except Exception as exc:
+        return f"Неверный JSON: {exc}"
+
+    if not isinstance(data, list):
+        return "Ожидается JSON массив"
+
+    if mode == "tests":
+        for i, item in enumerate(data, start=1):
+            if not isinstance(item, dict):
+                return f"Тест {i}: ожидается объект"
+            if "input" not in item or "expected_output" not in item:
+                return f"Тест {i}: нужны поля input и expected_output"
+            if not isinstance(item["input"], str) or not isinstance(item["expected_output"], str):
+                return f"Тест {i}: input и expected_output должны быть строками"
+        return None
+
+    if mode == "flashcards":
+        for i, item in enumerate(data, start=1):
+            if not isinstance(item, dict):
+                return f"Карточка {i}: ожидается объект"
+            if "question" not in item or "answer" not in item:
+                return f"Карточка {i}: нужны поля question и answer"
+            if not isinstance(item["question"], str) or not isinstance(item["answer"], str):
+                return f"Карточка {i}: question и answer должны быть строками"
+            if not item["question"].strip() or not item["answer"].strip():
+                return f"Карточка {i}: question и answer не должны быть пустыми"
+        return None
+
+    if mode == "questions":
+        for i, item in enumerate(data, start=1):
+            if not isinstance(item, dict):
+                return f"Вопрос {i}: ожидается объект"
+            if "text" not in item or "answers" not in item:
+                return f"Вопрос {i}: нужны поля text и answers"
+            if not isinstance(item["text"], str) or not item["text"].strip():
+                return f"Вопрос {i}: text должен быть непустой строкой"
+            answers = item["answers"]
+            if not isinstance(answers, list) or len(answers) < 2:
+                return f"Вопрос {i}: answers должен быть массивом минимум из 2 вариантов"
+            correct_count = 0
+            for j, ans in enumerate(answers, start=1):
+                if not isinstance(ans, dict):
+                    return f"Вопрос {i} ответ {j}: ожидается объект"
+                if "text" not in ans or "is_correct" not in ans:
+                    return f"Вопрос {i} ответ {j}: нужны поля text и is_correct"
+                if not isinstance(ans["text"], str) or not ans["text"].strip():
+                    return f"Вопрос {i} ответ {j}: text должен быть непустой строкой"
+                if not isinstance(ans["is_correct"], bool):
+                    return f"Вопрос {i} ответ {j}: is_correct должен быть bool"
+                if ans["is_correct"]:
+                    correct_count += 1
+            if correct_count != 1:
+                return f"Вопрос {i}: должен быть ровно один правильный ответ"
+        return None
+
+    return "Неизвестный режим"
+
 def _migrate_schema():
     Base.metadata.create_all(bind=engine)
     if "sqlite" not in DATABASE_URL:
@@ -515,8 +579,25 @@ def generate_assistant_content(teacher_id: int, req: AssistantGenerateRequest, d
 
     try:
         with GigaChat(credentials=API_KEY, verify_ssl_certs=False) as giga:
-            response = giga.chat(prompt)
-        content = response.choices[0].message.content if response and response.choices else ""
+            content = ""
+            last_error = None
+            for _ in range(5):
+                response = giga.chat(prompt)
+                content = response.choices[0].message.content if response and response.choices else ""
+                normalized = normalize_ai_json(content)
+                last_error = validate_assistant_result(req.mode, normalized)
+                if not last_error:
+                    content = normalized
+                    break
+                prompt = (
+                    "В твоем ответе есть ошибка. Исправь и верни только JSON без пояснений.\n"
+                    f"Ошибка: {last_error}\n"
+                    f"Текущий ответ: {normalized}"
+                )
+            if last_error:
+                raise HTTPException(400, f"Ошибка валидации ответа ИИ: {last_error}")
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(500, f"Ошибка GigaChat: {exc}")
 
