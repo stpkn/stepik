@@ -1,9 +1,18 @@
-import React from "react";
+import React , { useState }  from "react";
 import { Link, useOutletContext } from "react-router-dom";
 
 function Learning() {
   const data = useOutletContext();
   const courses = data?.courses ?? [];
+  const [activeFilter, setActiveFilter] = useState("all");
+
+  const filteredCourses = courses.filter((course) => {
+    if (activeFilter === "in_progress") return course.progress > 0 && course.progress < 100;
+    if (activeFilter === "completed") return course.progress === 100;
+    if (activeFilter === "attention") return course.progress === 0;
+    return true; // "all"
+  });
+
 
   return (
     <>
@@ -19,11 +28,33 @@ function Learning() {
           Фильтры и фокус
         </h2>
         <div className="filter-card">
-          <p className="priority-pill priority-pill--p2">P2</p>
+
           <div className="chip-row">
-            <span className="chip">В процессе</span>
-            <span className="chip">Завершенные</span>
-            <span className="chip">Требуют внимания</span>
+            {["all", "in_progress", "completed", "attention"].map((filterId) => {
+              const labels = {
+                all: "Все",
+                in_progress: "В процессе",
+                completed: "Завершенные",
+                attention: "Требуют внимания",
+              };
+              return (
+                <button
+                  key={filterId}
+                  type="button"
+                  className={`chip ${activeFilter === filterId ? "chip--active" : ""}`}
+                  onClick={() => setActiveFilter(filterId)}
+                  style={{
+                    cursor: "pointer",
+                    border: activeFilter === filterId ? "2px solid #4f46e5" : "1px solid #cbd5e1",
+                    background: activeFilter === filterId ? "#eef2ff" : "transparent",
+                    color: activeFilter === filterId ? "#4f46e5" : "inherit",
+                    fontWeight: activeFilter === filterId ? 600 : 400,
+                  }}
+                >
+                  {labels[filterId]}
+                </button>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -33,7 +64,7 @@ function Learning() {
           Курсы
         </h2>
         <div className="course-grid">
-          {courses.map((course) => (
+          {filteredCourses.map((course) => (
             <Link
               key={course.id}
               to={`/course/${course.id}`}
@@ -64,7 +95,7 @@ function Learning() {
           Следующий шаг
         </h2>
         <div className="notice-banner">
-          Продолжайте модуль "Hooks" в курсе React: это даст лучший темп на этой неделе.
+          Пожалуйста, откройте и изучите следующие модули курса!
         </div>
       </section>
     </>

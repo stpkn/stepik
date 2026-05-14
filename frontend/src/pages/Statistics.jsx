@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
 import { getAverageProgress } from "../data/mockStudent";
 
@@ -6,13 +6,47 @@ function Statistics() {
   const data = useOutletContext();
   const courses = data?.courses ?? [];
   const stats = data?.stats ?? {};
-  const weeklyHours = data?.weekly_hours ?? [];
-
   const avg = getAverageProgress(courses);
-  const maxHours =
-    weeklyHours.length > 0
-      ? Math.max(...weeklyHours.map((d) => d.hours), 1)
-      : 1;
+
+  // 👇 Состояние для сохранённой картинки
+  const [savedImage, setSavedImage] = useState(null);
+  const studentId = data?.id ?? "anon"; // Ключ для localStorage
+
+  // 1. Загружаем картинку при открытии страницы
+  useEffect(() => {
+    const stored = localStorage.getItem(`stats_img_${studentId}`);
+    if (stored) setSavedImage(stored);
+  }, [studentId]);
+
+  // 2. Обработка выбора файла
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Лимит 2 МБ (localStorage вмещает ~5 МБ, лучше не превышать)
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Файл слишком большой. Максимум 2 МБ.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result;
+      setSavedImage(base64);
+      try {
+        localStorage.setItem(`stats_img_${studentId}`, base64);
+      } catch (err) {
+        alert("Не удалось сохранить: переполнено хранилище браузера");
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // 3. Удаление картинки
+  const removeImage = () => {
+    setSavedImage(null);
+    localStorage.removeItem(`stats_img_${studentId}`);
+  };
 
   return (
     <>
@@ -70,48 +104,64 @@ function Statistics() {
             </div>
             <p className="chart-card__caption">По вашим курсам из API</p>
           </div>
-          <div className="chart-card">
-            <h3 className="chart-card__title">Часы по дням недели</h3>
-            <ul className="bar-chart" aria-label="Часы обучения по дням">
-              {weeklyHours.map((row) => (
-                <li key={row.day} className="bar-chart__row">
-                  <span className="bar-chart__day">{row.day}</span>
-                  <div className="bar-chart__track">
-                    <div
-                      className="bar-chart__fill"
-                      style={{ width: `${(row.hours / maxHours) * 100}%` }}
-                    />
-                  </div>
-                  <span className="bar-chart__val">{row.hours} ч</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </section>
 
-      <section className="dashboard-section" aria-labelledby="stats-extra-title">
-        <h2 id="stats-extra-title" className="dashboard-section-title">
-          Дополнительные аналитические блоки
-        </h2>
-        <div className="insight-grid">
-          <article className="insight-card">
-            <p className="priority-pill priority-pill--p2">P2</p>
-            <h3 className="insight-card__title">Сравнение неделя к неделе</h3>
-            <p className="insight-text">
-              Текущая неделя: +11% активности относительно предыдущей.
-            </p>
-          </article>
-          <article className="insight-card">
-            <p className="priority-pill priority-pill--p3">P3</p>
-            <h3 className="insight-card__title">Экспорт отчета</h3>
-            <p className="insight-text">
-              Предпросмотр выгрузки CSV для прогресса и недельной активности.
-            </p>
-          </article>
-        </div>
-        <div className="notice-banner notice-banner--warn">
-          Если API временно недоступен, показывается последний успешный снимок и кнопка повторной загрузки.
+          {/* 👇 КАРТОЧКА С ЗАГРУЗКОЙ И СОХРАНЕНИЕМ */}
+          <div className="chart-card">
+            <h3 className="chart-card__title">Добавить изображение</h3>
+
+            {!savedImage ? (
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "30px 20px",
+                  border: "2px dashed #cbd5e1",
+                  borderRadius: "12px",
+                  background: "#f8fafc",
+                  cursor: "pointer",
+                  transition: "border-color 0.2s"
+                }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = "#94a3b8"}
+                onMouseLeave={e => e.currentTarget.style.borderColor = "#cbd5e1"}
+              >
+                <label style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", cursor: "pointer", width: "100%" }}>
+                  <span style={{ fontSize: "2.5rem" }}>🖼️</span>
+                  <span style={{ color: "#475569", fontWeight: 500 }}>Нажми, чтобы выбрать из галереи</span>
+                  <span style={{ fontSize: "0.85rem", color: "#94a3b8" }}>JPG, PNG, WEBP до 2 МБ</span>
+                  <input type="file" accept="image/*" onChange={handleImageChange} style={{ display: "none" }} />
+                </label>
+              </div>
+            ) : (
+              <div style={{ position: "relative", textAlign: "center", padding: "10px 0" }}>
+                <img
+                  src={savedImage}
+                  alt="Сохранённое изображение"
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: "220px",
+                    borderRadius: "10px",
+                    objectFit: "cover",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.08)"
+                  }}
+                />
+                <button
+                  onClick={removeImage}
+                  style={{
+                    position: "absolute", top: "12px", right: "12px",
+                    background: "rgba(0,0,0,0.6)", color: "#fff",
+                    border: "none", borderRadius: "50%", width: "32px", height: "32px",
+                    cursor: "pointer", fontSize: "1.2rem", lineHeight: "1",
+                    display: "flex", alignItems: "center", justifyContent: "center"
+                  }}
+                  aria-label="Удалить изображение"
+                >
+                  ×
+                </button>
+                <p style={{ marginTop: "12px", fontSize: "0.85rem", color: "#64748b" }}>
+                  ✅ Картинка сохранена локально
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </section>
     </>

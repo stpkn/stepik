@@ -153,8 +153,8 @@ class CourseCreate(BaseModel):
     theory: str = ""
     coding_task: str = ""
     coding_solution: str = ""
-    test_cases: List[TestCaseIn] = []
-    flashcards: List[FlashcardCardIn] = []
+    test_cases: List["TestCaseIn"] = []
+    flashcards: List["FlashcardCardIn"] = []
     questions: List[QuestionIn] = []
 
 class AnswerCheckIn(BaseModel):
@@ -181,6 +181,13 @@ class FlashcardCreateRequest(BaseModel):
 class FlashcardProgressRequest(BaseModel):
     card_index: int
     confidence: str  # "still_learning", "almost_there", "mastered"
+class ActivityLog(Base):
+    __tablename__ = "activity_logs"
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    action = Column(String, nullable=False)  # e.g., "course_opened"
+    details = Column(String, nullable=True)  # e.g., "Открыт курс: Введение в Python"
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 class AssistantGenerateRequest(BaseModel):
     mode: str  # "tests", "questions", "flashcards"
@@ -311,14 +318,16 @@ def get_db():
     db = SessionLocal()
     try: yield db
     finally: db.close()
-
+def log_activity(db: Session, student_id: int, action: str, details: str = ""):
+    db.add(ActivityLog(student_id=student_id, action=action, details=details))
+    db.commit()
 def verify_password(plain, hashed): return pwd_context.verify(plain, hashed)
 def hash_password(pw): return pwd_context.hash(pw)
 
 def compute_student_course_progress(db: Session, student_id: int, course_id: int) -> int:
     n = db.query(Question).filter(Question.course_id == course_id).count()
     if n == 0:
-        return 100
+        return 0  # 👈 Меняем на 0%
     qids = [r[0] for r in db.query(Question.id).filter(Question.course_id == course_id).all()]
     solved = db.query(StudentQuestionResult).filter(
         StudentQuestionResult.student_id == student_id,
@@ -326,6 +335,16 @@ def compute_student_course_progress(db: Session, student_id: int, course_id: int
         StudentQuestionResult.is_correct == True,
     ).count()
     return int(round(100.0 * solved / n))
+    qids = [r[0] for r in db.query(Question.id).filter(Question.course_id == course_id).all()]
+    solved = db.query(StudentQuestionResult).filter(
+        StudentQuestionResult.student_id == student_id,
+        StudentQuestionResult.question_id.in_(qids),
+        StudentQuestionResult.is_correct == True,
+    ).count()
+    return int(round(100.0 * solved / n))
+
+
+
 
 def sync_course_progress_row(db: Session, student_id: int, course_id: int) -> int:
     pct = compute_student_course_progress(db, student_id, course_id)
@@ -364,8 +383,10 @@ def get_student_course_content(student_id: int, course_id: int, db: Session = De
     if not course: raise HTTPException(404, "Курс не найден")
     if course not in student.enrolled:
         raise HTTPException(403, "Вы не записаны на этот курс")
+    log_activity(db, student_id, "course_opened", f"Открыт курс: {course.title}")
+
     questions_out = []
-    qrows = db.query(Question).filter(Question.course_id==course_id).order_by(Question.id).all()
+    qrows = db.query(Question).filter(Question.course_id == course_id).order_by(Question.id).all()
     qids = [q.id for q in qrows]
     solved_ids = []
     if qids:
@@ -448,8 +469,28 @@ def get_student(student_id: int, db: Session = Depends(get_db)):
     for c in student.enrolled:
         pct = get_student_course_progress(db, student.id, c.id)
         courses.append({"id":c.id,"title":c.title,"description":c.description or "","progress":pct,"featured":False})
-    return {"id":student.id,"display_name":f"{student.first_name} {student.last_name}","courses":courses,"stats":{"completed_courses":0,"active_courses":len(courses),"certificates":0,"study_hours":0},"weekly_hours":[],"activity":[]}
+    recent = db.query(ActivityLog).filter(
+        ActivityLog.student_id == student_id
+    ).order_by(ActivityLog.created_at.desc()).limit(20).all()
 
+    activity_list = []
+    for act in recent:
+        when = act.created_at.strftime("%d.%m.%Y %H:%M") if act.created_at else ""
+        activity_list.append({
+            "id": act.id,
+            "action": act.action,
+            "details": act.details,
+            "when": when
+        })
+
+    return {
+        "id": student.id,
+        "display_name": f"{student.first_name} {student.last_name}",
+        "courses": courses,
+        "stats": {"completed_courses": 0, "active_courses": len(courses), "certificates": 0, "study_hours": 0},
+        "weekly_hours": [],
+        "activity": activity_list  # 👈 теперь не пустой массив
+    }
 @app.get("/teacher/{teacher_id}")
 def get_teacher(teacher_id: int, db: Session = Depends(get_db)):
     teacher = db.query(User).filter(User.id==teacher_id, User.role=="teacher").first()
@@ -561,6 +602,95 @@ def create_student(teacher_id: int, req: StudentCreate, db: Session = Depends(ge
         student.enrolled.append(course)
     db.commit(); db.refresh(student)
     return {"id":student.id,"login":student.login,"password":password,"role":"student"}
+
+
+@app.post("/teacher/{teacher_id}/courses/{course_id}/enroll/{student_id}")
+def enroll_student_to_course(teacher_id: int, course_id: int, student_id: int, db: Session = Depends(get_db)):
+    teacher = db.query(User).filter(User.id == teacher_id, User.role == "teacher").first()
+    if not teacher:
+        raise HTTPException(404, "Преподаватель не найден")
+
+    course = db.query(Course).filter(Course.id == course_id, Course.teacher_id == teacher_id).first()
+    if not course:
+        raise HTTPException(404, "Курс не найден или не принадлежит вам")
+
+    student = db.query(User).filter(User.id == student_id, User.role == "student").first()
+    if not student:
+        raise HTTPException(404, "Студент не найден")
+
+    # Проверка на дубликат зачисления
+    existing = db.query(enrollments).filter(
+        enrollments.c.student_id == student_id,
+        enrollments.c.course_id == course_id
+    ).first()
+    if existing:
+        raise HTTPException(400, "Студент уже зачислен на этот курс")
+
+    # Зачисляем через таблицу связей
+    db.execute(enrollments.insert().values(student_id=student_id, course_id=course_id))
+    db.commit()
+
+    return {"message": "Студент успешно зачислен на курс"}
+@app.delete("/teacher/{teacher_id}/courses/{course_id}")
+def delete_course(teacher_id: int, course_id: int, db: Session = Depends(get_db)):
+    teacher = db.query(User).filter(User.id == teacher_id, User.role == "teacher").first()
+    if not teacher:
+        raise HTTPException(404, "Преподаватель не найден")
+
+    # Проверяем, что курс принадлежит учителю
+    course = db.query(Course).filter(Course.id == course_id, Course.teacher_id == teacher_id).first()
+    if not course:
+        raise HTTPException(404, "Курс не найден или не принадлежит вам")
+
+    # Безопасная очистка зависимостей
+    db.query(CourseProgress).filter(CourseProgress.course_id == course_id).delete()
+    db.query(FlashcardProgress).filter(FlashcardProgress.course_id == course_id).delete()
+    db.query(Flashcard).filter(Flashcard.course_id == course_id).delete()
+    db.query(CodeSubmission).filter(CodeSubmission.course_id == course_id).delete()
+
+    # Удаляем студентов из этого курса
+    db.execute(enrollments.delete().where(enrollments.c.course_id == course_id))
+
+    # Вопросы удалятся сами благодаря cascade="all, delete-orphan" в модели
+    db.delete(course)
+    db.commit()
+
+    return {"message": "Курс успешно удалён"}
+
+@app.delete("/teacher/{teacher_id}/students/{student_id}")
+def delete_student(teacher_id: int, student_id: int, db: Session = Depends(get_db)):
+    # 1. Проверяем преподавателя
+    teacher = db.query(User).filter(User.id == teacher_id, User.role == "teacher").first()
+    if not teacher:
+        raise HTTPException(404, "Преподаватель не найден")
+
+    # 2. Проверяем студента
+    student = db.query(User).filter(User.id == student_id, User.role == "student").first()
+    if not student:
+        raise HTTPException(404, "Студент не найден")
+
+    # 3. Проверка: студент должен быть записан хотя бы в один курс этого учителя
+    teacher_course_ids = [c.id for c in teacher.courses]
+    is_enrolled = db.query(enrollments).filter(
+        enrollments.c.student_id == student_id,
+        enrollments.c.course_id.in_(teacher_course_ids)
+    ).first()
+    if not is_enrolled:
+        raise HTTPException(403, "Этот студент не относится к вашим курсам")
+
+    # 4. Очистка связанных данных (чтобы SQLAlchemy не выбросил ошибку FK)
+    db.query(CourseProgress).filter(CourseProgress.student_id == student_id).delete()
+    db.query(StudentQuestionResult).filter(StudentQuestionResult.student_id == student_id).delete()
+    db.query(CodeSubmission).filter(CodeSubmission.student_id == student_id).delete()
+    db.query(FlashcardProgress).filter(FlashcardProgress.student_id == student_id).delete()
+    db.execute(enrollments.delete().where(enrollments.c.student_id == student_id))
+
+    # 5. Удаляем самого студента
+    db.delete(student)
+    db.commit()
+
+    return {"message": "Студент успешно удалён"}
+
 
 @app.post("/teacher/{teacher_id}/assistant/generate")
 def generate_assistant_content(teacher_id: int, req: AssistantGenerateRequest, db: Session = Depends(get_db)):

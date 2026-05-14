@@ -5,7 +5,7 @@ import { getStoredUser, clearStoredUser } from "../auth/storage";
 import ThemeToggle from "../components/ThemeToggle";
 import AddStudentModal from "../components/AddStudentModal";
 import CreateCourseModal from "../components/CreateCourseModal";
-
+import EnrollStudentModal from "../components/EnrollStudentModal";
 async function fetchTeacher(id) {
   const res = await fetch(`${API_BASE}/teacher/${id}`);
   if (!res.ok) {
@@ -21,6 +21,7 @@ function TeacherDashboardView({ teacherId }) {
   const [studentsList, setStudentsList] = useState([]);
   const [addStudentOpen, setAddStudentOpen] = useState(false);
   const [createCourseOpen, setCreateCourseOpen] = useState(false);
+  const [enrollStudentOpen, setEnrollStudentOpen] = useState(false);
 
   const refreshStudents = useCallback(() => {
     fetch(`${API_BASE}/teacher/${teacherId}/students`)
@@ -34,6 +35,51 @@ function TeacherDashboardView({ teacherId }) {
       .then(setStudentsList)
       .catch(() => setStudentsList([]));
   }, [teacherId]);
+
+const handleDeleteStudent = async (studentId) => {
+    if (!window.confirm("Вы уверены, что хотите удалить этого студента? Все его прогресс и попытки будут удалены.")) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/teacher/${teacherId}/students/${studentId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || "Не удалось удалить студента");
+      }
+
+      setStudentsList(prev => prev.filter(s => s.id !== studentId));
+      alert("✅ Студент удалён");
+    } catch (err) {
+      alert(`❌ Ошибка: ${err.message}`);
+    }
+  };
+
+
+  const handleDeleteCourse = async (courseId) => {
+    if (!window.confirm("Вы уверены, что хотите удалить этот курс? Весь прогресс студентов будет уничтожен.")) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/teacher/${teacherId}/courses/${courseId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || "Не удалось удалить курс");
+      }
+
+      alert("✅ Курс удалён");
+      load(); // Обновляем данные дашборда
+    } catch (err) {
+      alert(`❌ Ошибка: ${err.message}`);
+    }
+  };
 
   useEffect(() => {
     refreshStudents();
@@ -237,6 +283,15 @@ function TeacherDashboardView({ teacherId }) {
                 <div className="progress-track">
                   <div className="progress-fill" style={{ width: `${c.avg_progress}%` }} />
                 </div>
+                <button
+                  type="button"
+                  className="teacher-btn teacher-btn--danger"
+                  onClick={() => handleDeleteCourse(c.id)}
+                  style={{ position: "absolute", top: "10px", right: "10px", padding: "4px 8px", fontSize: "0.8rem" }}
+                >
+                   Удалить
+                    </button>
+
               </article>
             ))}
           </div>
@@ -305,20 +360,30 @@ function TeacherDashboardView({ teacherId }) {
               Добавить ученика
             </button>
           </div>
-          {studentsList.length === 0 ? (
-            <p className="teacher-class-list-empty">Пока нет учеников на ваших курсах.</p>
-          ) : (
-            <ul className="teacher-class-list">
-              {studentsList.map((s) => (
-                <li key={s.id} className="teacher-class-list__item">
-                  <span className="teacher-class-list__name">
-                    {s.first_name} {s.last_name}
-                  </span>
-                  <span className="teacher-class-list__login">{s.login}</span>
-                </li>
-              ))}
-            </ul>
-          )}
+                     {studentsList.length === 0 ? (
+             <p className="teacher-class-list-empty">Пока нет учеников на ваших курсах.</p>
+           ) : (
+             <ul className="teacher-class-list">
+               {studentsList.map((s) => (
+                 <li key={s.id} className="teacher-class-list__item" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "40px", padding: "10px 10px" }}>
+                   <div>
+                     <span className="teacher-class-list__name">
+                       {s.first_name} {s.last_name}
+                     </span>
+                     <span className="teacher-class-list__login">    {s.login}</span>
+                   </div>
+                   <button
+                     type="button"
+                     className="teacher-btn teacher-btn--danger"
+                     onClick={() => handleDeleteStudent(s.id)}
+                     style={{ fontSize: "0.85rem", padding: "6px 12px", flexShrink: 0 }}
+                   >
+                     🗑 Удалить
+                   </button>
+                 </li>
+               ))}
+             </ul>
+           )}
         </section>
 
         <section
@@ -330,9 +395,7 @@ function TeacherDashboardView({ teacherId }) {
             Управление курсами
           </h2>
           <div className="teacher-manage-card">
-            <p className="teacher-manage-card__hint">
-              Кнопки только для интерфейса — без сохранения на сервере.
-            </p>
+
             <div className="teacher-manage-actions">
               <button
                 type="button"
@@ -341,31 +404,19 @@ function TeacherDashboardView({ teacherId }) {
               >
                 Создать курс
               </button>
-              <button type="button" className="teacher-btn teacher-btn--secondary">
-                Редактировать
-              </button>
-              <button type="button" className="teacher-btn teacher-btn--danger">
-                Удалить
-              </button>
+                <button
+    type="button"
+    className="teacher-btn teacher-btn--secondary"
+    onClick={() => setEnrollStudentOpen(true)}
+  >
+    Зачислить ученика
+  </button>
+
             </div>
           </div>
 
           <div className="insight-grid" style={{ marginTop: "14px" }}>
-            <article className="insight-card">
-              <p className="priority-pill priority-pill--p2">P2</p>
-              <h3 className="insight-card__title">Очередь проверок</h3>
-              <ul className="insight-list">
-                <li>4 задания ожидают обратной связи</li>
-                <li>2 запроса на разбор ошибки в коде</li>
-              </ul>
-            </article>
-            <article className="insight-card">
-              <p className="priority-pill priority-pill--p3">P3</p>
-              <h3 className="insight-card__title">Превью тепловой карты группы</h3>
-              <p className="insight-text">
-                Дополнительный вид для анализа активности по темам и неделям.
-              </p>
-            </article>
+
           </div>
         </section>
 
@@ -381,6 +432,13 @@ function TeacherDashboardView({ teacherId }) {
           teacherId={teacherId}
           onCourseCreated={load}
         />
+
+        <EnrollStudentModal
+  isOpen={enrollStudentOpen}
+  onClose={() => setEnrollStudentOpen(false)}
+  teacherId={teacherId}
+  onEnrolled={load} // Обновит данные дашборда после зачисления
+/>
       </main>
     </div>
   );

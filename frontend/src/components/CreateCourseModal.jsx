@@ -230,7 +230,7 @@ export default function CreateCourseModal({
           return;
         }
         for (const test of tests) {
-          if (!test.input || typeof test.input !== 'string' || 
+          if (!test.input || typeof test.input !== 'string' ||
               !test.expected_output || typeof test.expected_output !== 'string') {
             window.alert("Каждый тест должен иметь поля: input (строка) и expected_output (строка)");
             return;
@@ -252,7 +252,7 @@ export default function CreateCourseModal({
           return;
         }
         for (const card of cards) {
-          if (!card.question || typeof card.question !== 'string' || 
+          if (!card.question || typeof card.question !== 'string' ||
               !card.answer || typeof card.answer !== 'string') {
             window.alert("Каждая карточка должна иметь поля: question (строка) и answer (строка)");
             return;
