@@ -24,12 +24,13 @@ from sqlalchemy import (
     UniqueConstraint,
     inspect,
     text,
+    or_,
 )
 from sqlalchemy.orm import sessionmaker, declarative_base, Session, relationship
 from passlib.context import CryptContext
 from pydantic import BaseModel
 from typing import List, Optional
-import uuid, os, json
+import uuid, os, json, re
 from datetime import datetime
 from dotenv import load_dotenv
 from app.utils import run_tests
@@ -72,6 +73,17 @@ class Course(Base):
     teacher = relationship("User", back_populates="courses")
     students = relationship("User", secondary=enrollments, back_populates="enrolled")
     questions = relationship("Question", back_populates="course", cascade="all, delete-orphan")
+    coding_tasks = relationship("CodingTask", back_populates="course", cascade="all, delete-orphan")
+
+class CodingTask(Base):
+    __tablename__ = "coding_tasks"
+    id = Column(Integer, primary_key=True, index=True)
+    course_id = Column(Integer, ForeignKey("courses.id"), nullable=False)
+    title = Column(String, nullable=True)
+    task = Column(Text, nullable=True)
+    solution = Column(Text, nullable=True)
+    test_cases = Column(Text, nullable=True)
+    course = relationship("Course", back_populates="coding_tasks")
 
 class Question(Base):
     __tablename__ = "questions"
@@ -108,6 +120,7 @@ class CodeSubmission(Base):
     id = Column(Integer, primary_key=True, index=True)
     student_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     course_id = Column(Integer, ForeignKey("courses.id"), nullable=False)
+    coding_task_id = Column(Integer, ForeignKey("coding_tasks.id"), nullable=True)
     code = Column(Text, nullable=False)
     language = Column(String, default="python")
     is_correct = Column(Boolean, default=False)
@@ -154,6 +167,7 @@ class CourseCreate(BaseModel):
     coding_task: str = ""
     coding_solution: str = ""
     test_cases: List["TestCaseIn"] = []
+    coding_tasks: List["CodingTaskIn"] = []
     flashcards: List["FlashcardCardIn"] = []
     questions: List[QuestionIn] = []
 
@@ -163,6 +177,7 @@ class AnswerCheckIn(BaseModel):
 
 class CodeSubmitRequest(BaseModel):
     code: str
+    task_id: Optional[int] = None
 
 class TestCaseIn(BaseModel):
     input: str
@@ -170,6 +185,13 @@ class TestCaseIn(BaseModel):
 
 class TestCasesUpdateRequest(BaseModel):
     tests: List[TestCaseIn]
+    task_id: Optional[int] = None
+
+class CodingTaskIn(BaseModel):
+    title: Optional[str] = None
+    task: str = ""
+    solution: str = ""
+    tests: List[TestCaseIn] = []
 
 class FlashcardCardIn(BaseModel):
     question: str
@@ -222,8 +244,33 @@ def build_assistant_prompt(mode: str, text: str) -> Optional[str]:
         )
     return None
 
+def build_summary_prompt(text: str) -> str:
+    return (
+        "Кратко резюмируй текст в 3-4 абзацах. "
+        "Без списков, заголовков и JSON."
+        f"\nТекст: {text}"
+    )
+
+def count_paragraphs(text: str) -> int:
+    parts = re.split(r"\n\s*\n", text.strip())
+    return len([p for p in parts if p.strip()])
+
 def normalize_ai_json(text: str) -> str:
     return text.replace("```json", "").replace("```", "").strip()
+
+def serialize_test_cases(test_cases: List["TestCaseIn"]) -> Optional[str]:
+    if not test_cases:
+        return None
+    return json.dumps([{"input": t.input, "expected_output": t.expected_output} for t in test_cases])
+
+def parse_test_cases(test_cases: Optional[str]) -> List[dict]:
+    if not test_cases:
+        return []
+    try:
+        data = json.loads(test_cases)
+        return data if isinstance(data, list) else []
+    except Exception:
+        return []
 
 def validate_assistant_result(mode: str, text: str) -> Optional[str]:
     """Return error message if invalid, else None."""
@@ -303,10 +350,33 @@ def _migrate_schema():
         stmts.append("ALTER TABLE courses ADD COLUMN coding_solution TEXT")
     if "test_cases" not in cols:
         stmts.append("ALTER TABLE courses ADD COLUMN test_cases TEXT")
+    if "code_submissions" in insp.get_table_names():
+        cs_cols = {c["name"] for c in insp.get_columns("code_submissions")}
+        if "coding_task_id" not in cs_cols:
+            stmts.append("ALTER TABLE code_submissions ADD COLUMN coding_task_id INTEGER")
     if stmts:
         with engine.begin() as conn:
             for s in stmts:
                 conn.execute(text(s))
+
+    db = SessionLocal()
+    try:
+        courses = db.query(Course).all()
+        for course in courses:
+            exists = db.query(CodingTask).filter(CodingTask.course_id == course.id).first()
+            if exists:
+                continue
+            if course.coding_task or course.coding_solution or course.test_cases:
+                db.add(CodingTask(
+                    course_id=course.id,
+                    title=None,
+                    task=course.coding_task,
+                    solution=course.coding_solution,
+                    test_cases=course.test_cases,
+                ))
+        db.commit()
+    finally:
+        db.close()
 
 @app.on_event("startup")
 def _ensure_tables():
@@ -402,13 +472,17 @@ def get_student_course_content(student_id: int, course_id: int, db: Session = De
         ans = [{"id": a.id, "text": a.text} for a in q.answers]
         questions_out.append({"id": q.id, "text": q.text, "answers": ans})
     
-    # Parse test_cases from JSON
-    tests = []
-    if course.test_cases:
-        try:
-            tests = json.loads(course.test_cases)
-        except:
-            tests = []
+    tasks_rows = db.query(CodingTask).filter(CodingTask.course_id == course_id).order_by(CodingTask.id).all()
+    coding_tasks = []
+    for task in tasks_rows:
+        coding_tasks.append({
+            "id": task.id,
+            "title": task.title or "",
+            "task": task.task or "",
+            "solution": task.solution or "",
+            "tests": parse_test_cases(task.test_cases),
+        })
+    primary_task = coding_tasks[0] if coding_tasks else {"task": "", "solution": "", "tests": []}
     
     # Parse flashcards from database
     flashcards = []
@@ -424,9 +498,10 @@ def get_student_course_content(student_id: int, course_id: int, db: Session = De
         "title": course.title,
         "description": course.description or "",
         "theory": course.theory or "",
-        "coding_task": course.coding_task or "",
-        "coding_solution": course.coding_solution or "",
-        "tests": tests,
+        "coding_task": primary_task["task"],
+        "coding_solution": primary_task["solution"],
+        "tests": primary_task["tests"],
+        "coding_tasks": coding_tasks,
         "flashcards": flashcards,
         "questions": questions_out,
         "progress": get_student_course_progress(db, student_id, course_id),
@@ -547,12 +622,18 @@ def create_teacher_course(teacher_id: int, req: CourseCreate, db: Session = Depe
     if not teacher: raise HTTPException(404, "Преподаватель не найден")
     if not req.title.strip(): raise HTTPException(400, "Укажите название курса")
     theory = (req.theory or "").strip() or None
-    ctask = (req.coding_task or "").strip() or None
-    csol = (req.coding_solution or "").strip() or None
-    # Serialize test_cases to JSON
-    test_cases_json = None
-    if req.test_cases:
-        test_cases_json = json.dumps([{"input": t.input, "expected_output": t.expected_output} for t in req.test_cases])
+    tasks_payload = req.coding_tasks or []
+    if not tasks_payload and (req.coding_task or req.coding_solution or req.test_cases):
+        tasks_payload = [CodingTaskIn(
+            title=None,
+            task=req.coding_task or "",
+            solution=req.coding_solution or "",
+            tests=req.test_cases or [],
+        )]
+    primary_task = tasks_payload[0] if tasks_payload else None
+    ctask = (primary_task.task or "").strip() if primary_task else None
+    csol = (primary_task.solution or "").strip() if primary_task else None
+    test_cases_json = serialize_test_cases(primary_task.tests) if primary_task else None
     course = Course(
         title=req.title.strip(),
         description=(req.description or "").strip() or None,
@@ -563,6 +644,15 @@ def create_teacher_course(teacher_id: int, req: CourseCreate, db: Session = Depe
         teacher_id=teacher_id,
     )
     db.add(course); db.flush()
+
+    for task in tasks_payload:
+        db.add(CodingTask(
+            course_id=course.id,
+            title=(task.title or "").strip() or None,
+            task=(task.task or "").strip() or None,
+            solution=(task.solution or "").strip() or None,
+            test_cases=serialize_test_cases(task.tests),
+        ))
     
     # Create flashcards if provided
     if req.flashcards:
@@ -700,15 +790,28 @@ def generate_assistant_content(teacher_id: int, req: AssistantGenerateRequest, d
     if not req.text.strip():
         raise HTTPException(400, "Введите описание для генерации")
 
-    prompt = build_assistant_prompt(req.mode, req.text.strip())
-    if not prompt:
-        raise HTTPException(400, "Некорректный режим")
+    source_text = req.text.strip()
 
     if not API_KEY:
         raise HTTPException(500, "API ключ GigaChat не настроен")
 
     try:
         with GigaChat(credentials=API_KEY, verify_ssl_certs=False) as giga:
+            if req.mode in {"flashcards", "questions"} and count_paragraphs(source_text) > 3:
+                summary_prompt = build_summary_prompt(source_text)
+                summary_response = giga.chat(summary_prompt)
+                summary = (
+                    summary_response.choices[0].message.content
+                    if summary_response and summary_response.choices
+                    else ""
+                ).strip()
+                if not summary:
+                    raise HTTPException(500, "Не удалось получить резюме текста")
+                source_text = summary
+
+            prompt = build_assistant_prompt(req.mode, source_text)
+            if not prompt:
+                raise HTTPException(400, "Некорректный режим")
             content = ""
             last_error = None
             for _ in range(5):
@@ -734,34 +837,51 @@ def generate_assistant_content(teacher_id: int, req: AssistantGenerateRequest, d
     return {"result": content}
 
 @app.get("/courses/{course_id}/coding")
-def get_coding_task(course_id: int, student_id: Optional[int] = None, db: Session = Depends(get_db)):
+def get_coding_task(
+    course_id: int,
+    student_id: Optional[int] = None,
+    task_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+):
     """Получить задание, тесты и историю попыток студента"""
     course = db.query(Course).filter(Course.id == course_id).first()
     if not course:
         raise HTTPException(404, "Курс не найден")
+
+    tasks_rows = db.query(CodingTask).filter(CodingTask.course_id == course_id).order_by(CodingTask.id).all()
+    if task_id is not None:
+        selected_task = next((t for t in tasks_rows if t.id == task_id), None)
+        if not selected_task:
+            raise HTTPException(404, "Практическое задание не найдено")
+    else:
+        selected_task = tasks_rows[0] if tasks_rows else None
     
     result = {
         "id": course.id,
         "title": course.title,
-        "task": course.coding_task or "",
-        "solution": course.coding_solution or "",
-        "tests": []
+        "task_id": selected_task.id if selected_task else None,
+        "task": selected_task.task if selected_task and selected_task.task else "",
+        "solution": selected_task.solution if selected_task and selected_task.solution else "",
+        "tests": parse_test_cases(selected_task.test_cases) if selected_task else [],
+        "tasks": [{"id": t.id, "title": t.title or "", "task": t.task or ""} for t in tasks_rows],
     }
     
-    # Парсить тесты
-    if course.test_cases:
-        try:
-            tests_data = json.loads(course.test_cases)
-            result["tests"] = tests_data if isinstance(tests_data, list) else []
-        except:
-            result["tests"] = []
-    
     # Если студент указан, добавить его попытки
-    if student_id:
-        submissions = db.query(CodeSubmission).filter(
+    if student_id and selected_task:
+        submissions_query = db.query(CodeSubmission).filter(
             CodeSubmission.student_id == student_id,
-            CodeSubmission.course_id == course_id
-        ).order_by(CodeSubmission.created_at.desc()).all()
+            CodeSubmission.course_id == course_id,
+        )
+        if len(tasks_rows) == 1:
+            submissions_query = submissions_query.filter(
+                or_(
+                    CodeSubmission.coding_task_id == selected_task.id,
+                    CodeSubmission.coding_task_id.is_(None),
+                )
+            )
+        else:
+            submissions_query = submissions_query.filter(CodeSubmission.coding_task_id == selected_task.id)
+        submissions = submissions_query.order_by(CodeSubmission.created_at.desc()).all()
         
         result["submissions"] = [{
             "id": s.id,
@@ -792,13 +912,26 @@ def submit_code(student_id: int, course_id: int, code_data: CodeSubmitRequest, d
     if course not in student.enrolled:
         raise HTTPException(403, "Вы не записаны на этот курс")
     
+    tasks_rows = db.query(CodingTask).filter(CodingTask.course_id == course_id).order_by(CodingTask.id).all()
+    if not tasks_rows:
+        raise HTTPException(400, "В курсе нет практических заданий")
+    if code_data.task_id is not None:
+        task = next((t for t in tasks_rows if t.id == code_data.task_id), None)
+        if not task:
+            raise HTTPException(404, "Практическое задание не найдено")
+    elif len(tasks_rows) == 1:
+        task = tasks_rows[0]
+    else:
+        raise HTTPException(400, "Укажите task_id для отправки решения")
+
     # Запустить тесты
-    test_results, is_correct, exec_time, error = run_tests(code_data.code, course.test_cases or "[]")
+    test_results, is_correct, exec_time, error = run_tests(code_data.code, task.test_cases or "[]")
     
     # Сохранить в БД
     submission = CodeSubmission(
         student_id=student_id,
         course_id=course_id,
+        coding_task_id=task.id,
         code=code_data.code,
         is_correct=is_correct,
         test_results=json.dumps(test_results),
@@ -818,16 +951,24 @@ def submit_code(student_id: int, course_id: int, code_data: CodeSubmitRequest, d
     }
 
 @app.get("/student/{student_id}/courses/{course_id}/submissions")
-def get_submissions(student_id: int, course_id: int, db: Session = Depends(get_db)):
+def get_submissions(
+    student_id: int,
+    course_id: int,
+    task_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+):
     """Получить историю попыток студента"""
     student = db.query(User).filter(User.id==student_id, User.role=="student").first()
     if not student:
         raise HTTPException(404, "Студент не найден")
     
-    submissions = db.query(CodeSubmission).filter(
+    submissions_query = db.query(CodeSubmission).filter(
         CodeSubmission.student_id == student_id,
-        CodeSubmission.course_id == course_id
-    ).order_by(CodeSubmission.created_at.desc()).all()
+        CodeSubmission.course_id == course_id,
+    )
+    if task_id is not None:
+        submissions_query = submissions_query.filter(CodeSubmission.coding_task_id == task_id)
+    submissions = submissions_query.order_by(CodeSubmission.created_at.desc()).all()
     
     return [{
         "id": s.id,
@@ -850,11 +991,25 @@ def update_tests(teacher_id: int, course_id: int, tests_data: TestCasesUpdateReq
     if not course:
         raise HTTPException(404, "Курс не найден или не ваш")
     
-    # Сохранить тесты как JSON
-    course.test_cases = json.dumps([{"input": t.input, "expected_output": t.expected_output} for t in tests_data.tests])
+    tasks_rows = db.query(CodingTask).filter(CodingTask.course_id == course_id).order_by(CodingTask.id).all()
+    if not tasks_rows:
+        raise HTTPException(400, "В курсе нет практических заданий")
+    if tests_data.task_id is not None:
+        task = next((t for t in tasks_rows if t.id == tests_data.task_id), None)
+        if not task:
+            raise HTTPException(404, "Практическое задание не найдено")
+    elif len(tasks_rows) == 1:
+        task = tasks_rows[0]
+    else:
+        raise HTTPException(400, "Укажите task_id для обновления тестов")
+
+    task.test_cases = serialize_test_cases(tests_data.tests)
+    if course.coding_task or course.coding_solution or course.test_cases:
+        if len(tasks_rows) == 1 and task.id == tasks_rows[0].id:
+            course.test_cases = task.test_cases
     db.commit()
-    
-    return {"message": "✅ Тесты обновлены", "count": len(tests_data.tests)}
+
+    return {"message": "✅ Тесты обновлены", "count": len(tests_data.tests), "task_id": task.id}
 
 @app.post("/teacher/{teacher_id}/courses/{course_id}/flashcards")
 def create_flashcards(teacher_id: int, course_id: int, req: FlashcardCreateRequest, db: Session = Depends(get_db)):
