@@ -22,6 +22,7 @@ export default function CoursePage() {
   const [selected, setSelected] = useState({});
   const [checked, setChecked] = useState({});
   const [progress, setProgress] = useState(0);
+  const [selectedTaskId, setSelectedTaskId] = useState(null);
 
   const load = useCallback(() => {
     if (!user || user.role !== "student" || !idValid) {
@@ -38,6 +39,11 @@ export default function CoursePage() {
       .then((json) => {
         setData(json);
         setProgress(json.progress ?? 0);
+        if (Array.isArray(json.coding_tasks) && json.coding_tasks.length > 0) {
+          setSelectedTaskId(json.coding_tasks[0].id ?? null);
+        } else if (json.coding_task || json.coding_solution || (json.tests && json.tests.length > 0)) {
+          setSelectedTaskId(null);
+        }
         setSelected({});
         const solved = json.solved_question_ids ?? [];
         const chk = {};
@@ -63,6 +69,9 @@ export default function CoursePage() {
       );
       const json = await res.json();
       setData(json);
+      if (Array.isArray(json.coding_tasks) && json.coding_tasks.length > 0) {
+        setSelectedTaskId(json.coding_tasks[0].id ?? null);
+      }
     } catch (e) {
       setError("Не удалось загрузить курс");
     } finally {
@@ -278,19 +287,67 @@ export default function CoursePage() {
           </section>
         ) : null}
 
-        {data.coding_task || data.coding_solution ? (
-          <section className="dashboard-section" aria-labelledby="course-code">
-            <h2 id="course-code" className="dashboard-section-title">
-              💻 Практика с кодом
-            </h2>
-            <CodeEditor 
-              courseId={courseId}
-              studentId={user.id}
-              task={data.coding_task || ""}
-              tests={data.tests || []}
-            />
-          </section>
-        ) : null}
+        {(() => {
+          const hasLegacy = data.coding_task || data.coding_solution || (data.tests && data.tests.length > 0);
+          const tasks = Array.isArray(data.coding_tasks) && data.coding_tasks.length > 0
+            ? data.coding_tasks
+            : hasLegacy
+            ? [
+                {
+                  id: null,
+                  title: "",
+                  task: data.coding_task || "",
+                  solution: data.coding_solution || "",
+                  tests: data.tests || [],
+                },
+              ]
+            : [];
+          if (!tasks.length) return null;
+          const activeTask = tasks.find((t) => t.id === selectedTaskId) || tasks[0];
+          const activeIndex = tasks.indexOf(activeTask);
+          return (
+            <section className="dashboard-section" aria-labelledby="course-code">
+              <h2 id="course-code" className="dashboard-section-title">
+                💻 Практика с кодом
+              </h2>
+              {tasks.length > 1 ? (
+                <div className="form-group">
+                  <label className="form-label" htmlFor="course-task-select">
+                    Выберите практику
+                  </label>
+                  <select
+                    id="course-task-select"
+                    className="form-input"
+                    value={activeTask.id ?? activeIndex}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const numericValue = Number(value);
+                      if (Number.isFinite(numericValue)) {
+                        const task = tasks.find((t) => t.id === numericValue) || tasks[numericValue];
+                        setSelectedTaskId(task?.id ?? null);
+                      } else {
+                        setSelectedTaskId(null);
+                      }
+                    }}
+                  >
+                    {tasks.map((task, idx) => (
+                      <option key={task.id ?? idx} value={task.id ?? idx}>
+                        {task.title?.trim() || `Практика ${idx + 1}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
+              <CodeEditor
+                courseId={courseId}
+                studentId={user.id}
+                task={activeTask.task || ""}
+                tests={activeTask.tests || []}
+                taskId={activeTask.id}
+              />
+            </section>
+          );
+        })()}
 
         <section className="dashboard-section" aria-labelledby="course-flashcards">
           <h2 id="course-flashcards" className="dashboard-section-title">

@@ -21,6 +21,7 @@ class User(Base):
 
 class Course(Base):
     __tablename__ = "courses"
+    #rmgke bygu
     id = Column(Integer, primary_key=True)
     title = Column(String, nullable=False)
     description = Column(String)

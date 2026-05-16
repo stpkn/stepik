@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { API_BASE } from '../api/config';
 import '../styles/code-editor.css';
 
-function CodeEditor({ courseId, studentId, task, tests }) {
+function CodeEditor({ courseId, studentId, task, tests, taskId }) {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState(null);
@@ -15,12 +15,13 @@ function CodeEditor({ courseId, studentId, task, tests }) {
   useEffect(() => {
     // Загрузить историю попыток
     loadSubmissions();
-  }, [courseId, studentId]);
+  }, [courseId, studentId, taskId]);
 
   const loadSubmissions = async () => {
     try {
+      const query = taskId != null ? `?task_id=${taskId}` : "";
       const response = await fetch(
-        `${API_BASE}/student/${studentId}/courses/${courseId}/submissions`,
+        `${API_BASE}/student/${studentId}/courses/${courseId}/submissions${query}`,
         { method: 'GET', headers: { 'Content-Type': 'application/json' } }
       );
       const data = await response.json();
@@ -42,12 +43,13 @@ function CodeEditor({ courseId, studentId, task, tests }) {
 
     setLoading(true);
     try {
+      const payload = taskId != null ? { code, task_id: taskId } : { code };
       const response = await fetch(
         `${API_BASE}/student/${studentId}/courses/${courseId}/submit-code`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code })
+          body: JSON.stringify(payload)
         }
       );
 
