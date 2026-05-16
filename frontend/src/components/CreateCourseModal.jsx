@@ -11,6 +11,15 @@ function emptyQuestion() {
   };
 }
 
+function emptyPracticeTask() {
+  return {
+    title: "",
+    task: "",
+    solution: "",
+    tests: "",
+  };
+}
+
 export default function CreateCourseModal({
   isOpen,
   onClose,
@@ -20,9 +29,8 @@ export default function CreateCourseModal({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [theory, setTheory] = useState("");
-  const [codingTask, setCodingTask] = useState("");
-  const [codingSolution, setCodingSolution] = useState("");
-  const [testCases, setTestCases] = useState("");
+  const [practiceTasks, setPracticeTasks] = useState([emptyPracticeTask()]);
+  const [aiTargetTaskIndex, setAiTargetTaskIndex] = useState(0);
   const [flashcards, setFlashcards] = useState("");
   const [aiMode, setAiMode] = useState("tests");
   const [aiPrompt, setAiPrompt] = useState("");
@@ -37,9 +45,8 @@ export default function CreateCourseModal({
       setTitle("");
       setDescription("");
       setTheory("");
-      setCodingTask("");
-      setCodingSolution("");
-      setTestCases("");
+      setPracticeTasks([emptyPracticeTask()]);
+      setAiTargetTaskIndex(0);
       setFlashcards("");
       setAiMode("tests");
       setAiPrompt("");
@@ -68,6 +75,30 @@ export default function CreateCourseModal({
 
   const addQuestion = () => {
     setQuestions((prev) => [...prev, emptyQuestion()]);
+  };
+
+  const addPracticeTask = () => {
+    setPracticeTasks((prev) => {
+      const next = [...prev, emptyPracticeTask()];
+      setAiTargetTaskIndex(next.length - 1);
+      return next;
+    });
+  };
+
+  const removePracticeTask = (index) => {
+    setPracticeTasks((prev) => {
+      if (prev.length <= 1) return [emptyPracticeTask()];
+      const next = prev.filter((_, i) => i !== index);
+      const nextIndex = Math.max(0, Math.min(aiTargetTaskIndex, next.length - 1));
+      setAiTargetTaskIndex(nextIndex);
+      return next;
+    });
+  };
+
+  const setPracticeTaskField = (index, field, value) => {
+    setPracticeTasks((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item))
+    );
   };
 
   const removeQuestion = (qi) => {
@@ -170,7 +201,13 @@ export default function CreateCourseModal({
     }
 
     if (aiMode === "tests") {
-      setTestCases(text);
+      if (!practiceTasks.length) {
+        setPracticeTasks([emptyPracticeTask()]);
+        setAiTargetTaskIndex(0);
+        setPracticeTaskField(0, "tests", text);
+        return;
+      }
+      setPracticeTaskField(aiTargetTaskIndex, "tests", text);
       return;
     }
     if (aiMode === "flashcards") {
@@ -220,26 +257,50 @@ export default function CreateCourseModal({
         }
       }
     }
-// Validate test cases if provided
-    let tests = [];
-    if (testCases.trim()) {
-      try {
-        tests = JSON.parse(testCases);
-        if (!Array.isArray(tests)) {
-          window.alert("Тесты должны быть JSON массивом объектов {input, expected_output}");
-          return;
-        }
-        for (const test of tests) {
-          if (!test.input || typeof test.input !== 'string' ||
-              !test.expected_output || typeof test.expected_output !== 'string') {
-            window.alert("Каждый тест должен иметь поля: input (строка) и expected_output (строка)");
-            return;
-          }
-        }
-      } catch (err) {
-        window.alert("Неверный JSON в поле тестов: " + err.message);
+    const rawTasks = practiceTasks
+      .map((task) => ({
+        title: task.title.trim(),
+        task: task.task.trim(),
+        solution: task.solution.trim(),
+        testsRaw: task.tests.trim(),
+      }))
+      .filter((task) => task.title || task.task || task.solution || task.testsRaw);
+
+    const codingTasks = [];
+    for (let i = 0; i < rawTasks.length; i++) {
+      const task = rawTasks[i];
+      const label = `Практическое задание ${i + 1}`;
+      if (!task.task) {
+        window.alert(`${label}: заполните описание задания`);
         return;
       }
+      let tests = [];
+      if (task.testsRaw) {
+        try {
+          tests = JSON.parse(task.testsRaw);
+          if (!Array.isArray(tests)) {
+            window.alert(`${label}: тесты должны быть JSON массивом объектов {input, expected_output}`);
+            return;
+          }
+          for (const test of tests) {
+            const hasInput = Object.prototype.hasOwnProperty.call(test, "input");
+            const hasExpected = Object.prototype.hasOwnProperty.call(test, "expected_output");
+            if (!hasInput || typeof test.input !== "string" || !hasExpected || typeof test.expected_output !== "string") {
+              window.alert(`${label}: каждый тест должен иметь поля input и expected_output (строки)`);
+              return;
+            }
+          }
+        } catch (err) {
+          window.alert(`${label}: неверный JSON в поле тестов: ${err.message}`);
+          return;
+        }
+      }
+      codingTasks.push({
+        title: task.title || null,
+        task: task.task,
+        solution: task.solution,
+        tests,
+      });
     }
 
     // Validate flashcards if provided
@@ -268,9 +329,7 @@ export default function CreateCourseModal({
       title: t,
       description: description.trim(),
       theory: theory.trim(),
-      coding_task: codingTask.trim(),
-      coding_solution: codingSolution.trim(),
-      test_cases: tests,
+      coding_tasks: codingTasks,
       flashcards: cards,
       questions: questions.map((q) => ({
         text: q.text.trim(),
@@ -411,6 +470,25 @@ export default function CreateCourseModal({
                 {aiLoading ? "Генерация..." : "Сгенерировать"}
               </button>
             </div>
+            {aiMode === "tests" ? (
+              <div className="form-group">
+                <label className="form-label" htmlFor="ai-helper-task-target">
+                  Практика для тестов
+                </label>
+                <select
+                  id="ai-helper-task-target"
+                  className="form-input"
+                  value={aiTargetTaskIndex}
+                  onChange={(e) => setAiTargetTaskIndex(Number(e.target.value))}
+                >
+                  {practiceTasks.map((_, idx) => (
+                    <option key={idx} value={idx}>
+                      Практика {idx + 1}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
             {aiError && (
               <small style={{ color: "#b91c1c", display: "block", marginTop: "6px" }}>
                 {aiError}
@@ -441,49 +519,87 @@ export default function CreateCourseModal({
               </button>
             </div>
           </div>
-          <div className="form-group">
-            <label className="form-label" htmlFor="course-coding-task">
-              Практика: задание
-            </label>
-            <textarea
-              id="course-coding-task"
-              className="form-input create-course-modal__textarea"
-              rows={3}
-              value={codingTask}
-              onChange={(e) => setCodingTask(e.target.value)}
-              placeholder="Формулировка задачи для студента"
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label" htmlFor="course-coding-sol">
-              Практика: пример решения
-            </label>
-            <textarea
-              id="course-coding-sol"
-              className="form-input create-course-modal__textarea"
-              rows={3}
-              value={codingSolution}
-              onChange={(e) => setCodingSolution(e.target.value)}
-              placeholder="Образец решения (для проверки себя)"
-            />
+          <div className="create-course-modal__toolbar">
+            <button
+              type="button"
+              className="teacher-btn teacher-btn--secondary"
+              onClick={addPracticeTask}
+            >
+              + Практическое задание
+            </button>
           </div>
 
-          <div className="form-group">
-            <label className="form-label" htmlFor="course-test-cases">
-              Практика: тесты (JSON)
-            </label>
-            <textarea
-              id="course-test-cases"
-              className="form-input create-course-modal__textarea"
-              rows={4}
-              value={testCases}
-              onChange={(e) => setTestCases(e.target.value)}
-              placeholder={'[{"input": "2", "expected_output": "4"}, {"input": "3", "expected_output": "9"}]'}
-            />
-            <small style={{ color: '#666', display: 'block', marginTop: '5px' }}>
-              JSON массив объектов с полями: input (входные данные) и expected_output (ожидаемый результат)
-            </small>
-          </div>
+          {practiceTasks.map((task, idx) => (
+            <div key={idx} className="create-course-modal__question">
+              <div className="create-course-modal__question-head">
+                <p className="create-course-modal__question-label">
+                  Практика {idx + 1}
+                </p>
+                <button
+                  type="button"
+                  className="teacher-btn teacher-btn--danger create-course-modal__q-remove"
+                  onClick={() => removePracticeTask(idx)}
+                >
+                  Удалить практику
+                </button>
+              </div>
+              <div className="form-group">
+                <label className="form-label" htmlFor={`course-task-title-${idx}`}>
+                  Название практики
+                </label>
+                <input
+                  id={`course-task-title-${idx}`}
+                  className="form-input"
+                  value={task.title}
+                  onChange={(e) => setPracticeTaskField(idx, "title", e.target.value)}
+                  placeholder="Например: Работа со строками"
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label" htmlFor={`course-coding-task-${idx}`}>
+                  Практика: задание
+                </label>
+                <textarea
+                  id={`course-coding-task-${idx}`}
+                  className="form-input create-course-modal__textarea"
+                  rows={3}
+                  value={task.task}
+                  onChange={(e) => setPracticeTaskField(idx, "task", e.target.value)}
+                  placeholder="Формулировка задачи для студента"
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label" htmlFor={`course-coding-sol-${idx}`}>
+                  Практика: пример решения
+                </label>
+                <textarea
+                  id={`course-coding-sol-${idx}`}
+                  className="form-input create-course-modal__textarea"
+                  rows={3}
+                  value={task.solution}
+                  onChange={(e) => setPracticeTaskField(idx, "solution", e.target.value)}
+                  placeholder="Образец решения (для проверки себя)"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" htmlFor={`course-test-cases-${idx}`}>
+                  Практика: тесты (JSON)
+                </label>
+                <textarea
+                  id={`course-test-cases-${idx}`}
+                  className="form-input create-course-modal__textarea"
+                  rows={4}
+                  value={task.tests}
+                  onChange={(e) => setPracticeTaskField(idx, "tests", e.target.value)}
+                  placeholder={'[{"input": "2", "expected_output": "4"}, {"input": "3", "expected_output": "9"}]'}
+                />
+                <small style={{ color: "#666", display: "block", marginTop: "5px" }}>
+                  JSON массив объектов с полями: input (входные данные) и expected_output (ожидаемый результат)
+                </small>
+              </div>
+            </div>
+          ))}
 
           <div className="form-group">
             <label className="form-label" htmlFor="course-flashcards">

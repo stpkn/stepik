@@ -251,6 +251,17 @@ def build_summary_prompt(text: str) -> str:
         f"\nТекст: {text}"
     )
 
+def build_tests_logic_prompt(task_text: str, tests_json: str) -> str:
+    return (
+        "Проверь логическую корректность тестов для задания. "
+        "Сравни input и expected_output с условиями задания. "
+        "Верни строго JSON без пояснений в формате: "
+        "{\"ok\": true/false, \"errors\": [\"...\"]}. "
+        "Если все корректно, ok=true и errors пустой массив."
+        f"\nЗадание: {task_text}"
+        f"\nТесты: {tests_json}"
+    )
+
 def count_paragraphs(text: str) -> int:
     parts = re.split(r"\n\s*\n", text.strip())
     return len([p for p in parts if p.strip()])
@@ -819,6 +830,26 @@ def generate_assistant_content(teacher_id: int, req: AssistantGenerateRequest, d
                 content = response.choices[0].message.content if response and response.choices else ""
                 normalized = normalize_ai_json(content)
                 last_error = validate_assistant_result(req.mode, normalized)
+                if not last_error and req.mode == "tests":
+                    logic_prompt = build_tests_logic_prompt(source_text, normalized)
+                    logic_response = giga.chat(logic_prompt)
+                    logic_text = (
+                        logic_response.choices[0].message.content
+                        if logic_response and logic_response.choices
+                        else ""
+                    )
+                    logic_text = normalize_ai_json(logic_text)
+                    try:
+                        logic_data = json.loads(logic_text)
+                        ok = bool(logic_data.get("ok"))
+                        errors = logic_data.get("errors")
+                        if not isinstance(errors, list):
+                            errors = ["Некорректный формат errors"]
+                        if not ok:
+                            msg = "; ".join(str(e) for e in errors) or "Логическая проверка не пройдена"
+                            last_error = f"Логическая проверка: {msg}"
+                    except Exception as exc:
+                        last_error = f"Логическая проверка: неверный JSON ({exc})"
                 if not last_error:
                     content = normalized
                     break
